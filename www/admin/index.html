@@ -1,0 +1,166 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>画廊后台</title><link rel="stylesheet" href="/public/style.css">
+<style>
+body{padding-bottom:80px}
+.bar{position:sticky;top:0;z-index:10;background:rgba(244,239,230,.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:12px;padding-top:14px;padding-bottom:14px;flex-wrap:wrap}
+.bar h1{font-size:24px;margin-right:auto}
+.btn{border:1px solid var(--line);background:#fff;padding:8px 16px;font:inherit;font-size:14px;cursor:pointer;border-radius:6px;color:var(--ink);text-decoration:none;display:inline-block}
+.btn.pri{background:var(--red);border-color:var(--red);color:#fff}
+.btn.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn:disabled{opacity:.5;cursor:default}
+.dirty{color:var(--red);font-size:13px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:18px 20px;margin:22px 0}
+.panel h2{font-size:16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:center;font-size:14px}
+.row label{display:flex;align-items:center;gap:8px}
+.row input[type=text],.row input[type=password],.row select{font:inherit;font-size:14px;padding:6px 10px;border:1px solid var(--line);border-radius:4px}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:22px;text-align:center;color:var(--mute);font-size:14px;margin-top:14px}
+.drop.on{border-color:var(--red);color:var(--red)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px}
+.card{background:#fff;border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:grab;position:relative}
+.card.drag{opacity:.4}.card.over{outline:3px solid var(--red)}
+.card .ph{height:150px;background:#eee center/cover}
+.card .num{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:1px 7px;border-radius:3px}
+.card .del{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(178,58,46,.9);color:#fff;cursor:pointer;font-size:14px}
+.card .f{padding:8px;display:grid;gap:6px}
+.card input{width:100%;font:inherit;font-size:13px;padding:5px 7px;border:1px solid var(--line);border-radius:4px}
+.hint{font-size:12px;color:var(--mute);margin:-6px 0 14px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:6px;font-size:14px;display:none;z-index:99}
+</style></head>
+<body>
+<div class="bar"><div class="wrap">
+ <h1 class="serif">画廊后台</h1><span class="dirty" id="dirty"></span>
+ <a class="btn" href="/" target="_blank">打开画廊</a>
+ <button class="btn pri" id="save">保存发布</button>
+ <a class="btn" href="/api/admin/logout">退出</a>
+</div></div>
+<div class="wrap">
+ <div class="panel"><h2>布局</h2><div class="row">
+  <label>标题 <input type="text" id="s-title" size="12"></label>
+  <label>副标题 <input type="text" id="s-subtitle" size="20"></label>
+  <label>每行列数 <select id="s-columns"><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+  <label>间距 <input type="range" id="s-gap" min="0" max="40"> <span id="gapv"></span></label>
+  <label>样式 <select id="s-frame"><option value="none">无边框</option><option value="white">白边相纸</option><option value="round">圆角卡片</option><option value="gallery">展厅画框</option></select></label>
+  <label>轮播间隔 <select id="s-interval"><option value="3">3 秒</option><option value="5">5 秒</option><option value="8">8 秒</option><option value="12">12 秒</option></select></label>
+  <label><input type="checkbox" id="s-captions"> 图下显示标题</label>
+  <label><input type="checkbox" id="s-filter"> 显示作者筛选</label>
+ </div></div>
+
+ <div class="panel"><h2>添加图片</h2><div class="row">
+  <label>作者 <input type="text" id="up-author" list="authors" placeholder="上传图片的作者"></label>
+  <button class="btn dark" id="pick">选择图片</button><input type="file" id="file" accept="image/*" multiple hidden>
+  <span id="upmsg" style="font-size:13px;color:var(--mute)"></span>
+ </div><div class="drop" id="drop">也可以把图片直接拖到这里（自动压缩，支持一次多张）</div></div>
+
+ <div class="panel"><h2>全部图片 <span id="cnt" style="color:var(--mute);font-weight:400"></span></h2>
+  <p class="hint">拖动卡片调整顺序；改完记得点右上角「保存发布」。</p>
+  <div class="cards" id="cards"></div></div>
+
+ <div class="panel"><h2>修改管理员密码</h2><div class="row">
+  <label>原密码 <input type="password" id="pw-old"></label>
+  <label>新密码 <input type="password" id="pw-new"></label>
+  <button class="btn" id="pw-go">修改</button></div></div>
+</div>
+<datalist id="authors"></datalist>
+<div class="toast" id="toast"></div>
+<script>
+const $ = id => document.getElementById(id);
+let items = [], S = {}, dirty = false;
+const toast = t => { $('toast').textContent = t; $('toast').style.display = 'block'; clearTimeout(toast.h); toast.h = setTimeout(() => $('toast').style.display = 'none', 2200); };
+const mark = () => { dirty = true; $('dirty').textContent = '有未保存的修改'; };
+window.onbeforeunload = e => dirty ? (e.returnValue = '') : undefined;
+
+async function load() {
+  const nc = '?t=' + Date.now();
+  items = await fetch('/data.json' + nc).then(r => r.json());
+  S = Object.assign({ title: '写生画廊', subtitle: '', columns: 4, gap: 16, frame: 'none', captions: false, filter: true, interval: 5 },
+    await fetch('/settings.json' + nc).then(r => r.json()).catch(() => ({})));
+  for (const k of ['title', 'subtitle', 'columns', 'gap', 'frame', 'interval']) $('s-' + k).value = S[k];
+  $('s-captions').checked = S.captions; $('s-filter').checked = S.filter; $('gapv').textContent = S.gap + 'px';
+  draw();
+}
+for (const k of ['title', 'subtitle', 'columns', 'gap', 'frame', 'interval', 'captions', 'filter'])
+  $('s-' + k).addEventListener('input', e => {
+    const el = e.target; S[k] = el.type === 'checkbox' ? el.checked : (k === 'columns' || k === 'gap' || k === 'interval') ? +el.value : el.value;
+    if (k === 'gap') $('gapv').textContent = S.gap + 'px'; mark();
+  });
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function draw() {
+  $('cnt').textContent = `（${items.length} 张）`;
+  $('authors').innerHTML = [...new Set(items.map(i => i.author).filter(Boolean))].map(a => `<option value="${esc(a)}">`).join('');
+  $('cards').innerHTML = items.map((it, i) => `<div class="card" draggable="true" data-i="${i}">
+    <div class="ph" style="background-image:url('/thumb/${it.id}.jpg${it.v ? '?v=' + it.v : ''}')"></div><span class="num">${i + 1}</span>
+    <button class="del" title="删除">✕</button>
+    <div class="f"><input data-k="title" value="${esc(it.title)}" placeholder="标题"><input data-k="author" list="authors" value="${esc(it.author)}" placeholder="作者"></div></div>`).join('');
+  $('cards').querySelectorAll('.card').forEach(c => {
+    const i = +c.dataset.i;
+    c.querySelector('.del').onclick = () => { if (confirm(`删除「${items[i].title || '这张图'}」？保存后图片文件会被移除。`)) { items.splice(i, 1); mark(); draw(); } };
+    c.querySelectorAll('input').forEach(inp => inp.oninput = () => { items[i][inp.dataset.k] = inp.value; mark(); });
+    c.ondragstart = e => { c.classList.add('drag'); e.dataTransfer.setData('text/plain', i); };
+    c.ondragend = () => c.classList.remove('drag');
+    c.ondragover = e => { if (e.dataTransfer.types.includes('Files')) return; e.preventDefault(); c.classList.add('over'); };
+    c.ondragleave = () => c.classList.remove('over');
+    c.ondrop = e => {
+      if (e.dataTransfer.files.length) return; e.preventDefault(); e.stopPropagation(); c.classList.remove('over');
+      const from = +e.dataTransfer.getData('text/plain'); if (from === i) return;
+      const [m] = items.splice(from, 1); items.splice(i, 0, m); mark(); draw();
+    };
+  });
+}
+
+function resize(img, max) {
+  const r = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.naturalWidth * r); c.height = Math.round(img.naturalHeight * r);
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(res => c.toBlob(b => res({ blob: b, w: c.width, h: c.height }), 'image/jpeg', 0.85));
+}
+async function upload(files) {
+  files = [...files].filter(f => f.type.startsWith('image/'));
+  if (!files.length) return;
+  const author = $('up-author').value.trim();
+  let done = 0;
+  for (const f of files) {
+    $('upmsg').textContent = `正在处理 ${done + 1} / ${files.length}…`;
+    try {
+      const url = URL.createObjectURL(f);
+      const img = await new Promise((ok, bad) => { const im = new Image(); im.onload = () => ok(im); im.onerror = bad; im.src = url; });
+      const big = await resize(img, 1800), small = await resize(img, 640);
+      URL.revokeObjectURL(url);
+      const id = 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      for (const [kind, b] of [['img', big], ['thumb', small]]) {
+        const r = await fetch(`/api/admin/upload?id=${id}&kind=${kind}`, { method: 'POST', body: b.blob });
+        if (!r.ok) throw new Error('上传失败 ' + r.status);
+      }
+      items.unshift({ id, title: f.name.replace(/\.[^.]+$/, '').slice(0, 60), author, w: small.w, h: small.h });
+      done++; mark(); draw();
+    } catch (e) { toast(`${f.name}：${e.message || '无法读取'}`); }
+  }
+  $('upmsg').textContent = `已添加 ${done} 张，点「保存发布」后画廊才会显示`;
+  $('file').value = '';
+}
+$('pick').onclick = () => $('file').click();
+$('file').onchange = e => upload(e.target.files);
+const dz = $('drop');
+dz.ondragover = e => { e.preventDefault(); dz.classList.add('on'); };
+dz.ondragleave = () => dz.classList.remove('on');
+dz.ondrop = e => { e.preventDefault(); dz.classList.remove('on'); upload(e.dataTransfer.files); };
+
+$('save').onclick = async () => {
+  $('save').disabled = true;
+  const r = await fetch('/api/admin/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items, settings: S }) });
+  $('save').disabled = false;
+  if (r.ok) { dirty = false; $('dirty').textContent = ''; toast('已保存，画廊已更新'); }
+  else if (r.status === 401) { toast('登录已过期，请重新登录'); setTimeout(() => location.href = '/public/admin-login.html', 1200); }
+  else toast('保存失败');
+};
+$('pw-go').onclick = async () => {
+  const r = await fetch('/api/admin/password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ old: $('pw-old').value, new: $('pw-new').value }) });
+  const d = await r.json().catch(() => ({}));
+  toast(r.ok ? '管理员密码已修改' : (d.error || '修改失败')); if (r.ok) { $('pw-old').value = ''; $('pw-new').value = ''; }
+};
+load();
+</script>
+</body></html>

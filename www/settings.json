@@ -1,0 +1,10 @@
+{
+ "title": "写生画廊",
+ "subtitle": "Sketch Gallery · Demo",
+ "columns": 4,
+ "gap": 16,
+ "frame": "none",
+ "captions": false,
+ "filter": true,
+ "interval": 5
+}

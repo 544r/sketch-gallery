@@ -1,0 +1,10 @@
+[Unit]
+Description=Gallery password auth
+After=network.target
+[Service]
+EnvironmentFile=/opt/gallery/.env
+ExecStart=/usr/bin/python3 /opt/gallery/server.py
+Restart=always
+User=www-data
+[Install]
+WantedBy=multi-user.target

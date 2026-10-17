@@ -1,0 +1,36 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>写生画廊</title><link rel="stylesheet" href="/public/style.css?v=3"></head>
+<body>
+<header class="hero">
+  <div class="eyebrow" id="st"></div>
+  <h1 class="serif" id="t"></h1>
+  <div class="meta" id="meta"></div>
+</header>
+
+<div class="toolbar" id="toolbar"><div class="tb-in">
+  <div class="seg" id="f"></div>
+  <div class="actions">
+    <button class="act ghost" id="rand"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>随机一张</button>
+    <button class="act solid" id="play"><svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg>轮播展示</button>
+  </div>
+</div></div>
+
+<main class="grid" id="grid"></main>
+
+<div class="viewer" id="lb">
+  <div class="progress"><i id="bar"></i></div>
+  <div class="stage" id="stage"><img class="layer" id="ia" alt=""><img class="layer" id="ib" alt=""></div>
+  <button class="vbtn close" id="lb-close" title="关闭 (Esc)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <div class="dock">
+    <div class="cap"><b id="cap-t"></b><span id="cap-a"></span><em id="cap-i"></em></div>
+    <div class="ctrl">
+      <button class="vbtn" id="lb-prev" title="上一张 (←)"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button class="vbtn" id="lb-rand" title="随机 (R)"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg></button>
+      <button class="vbtn big" id="lb-play" title="播放/暂停 (空格)"><svg class="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z" fill="currentColor" stroke="none"/></svg><svg class="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+      <button class="vbtn" id="lb-full" title="全屏 (F)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      <button class="vbtn" id="lb-next" title="下一张 (→)"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+  </div>
+</div>
+<script src="/app.js?v=3"></script>
+</body></html>
